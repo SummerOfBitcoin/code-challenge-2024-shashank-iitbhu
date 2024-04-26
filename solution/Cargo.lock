@@ -135,7 +135,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "src"
+name = "solution"
 version = "0.1.0"
 dependencies = [
  "serde",

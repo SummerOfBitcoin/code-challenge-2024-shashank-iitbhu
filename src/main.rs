@@ -42,7 +42,7 @@ struct Vout {
 }
 
 fn main() -> io::Result<()> {
-    let mempool_dir = "../mempool";
+    let mempool_dir = "mempool";
     let mut transactions = vec![];
     for entry in fs::read_dir(mempool_dir)? {
         let entry = entry?;

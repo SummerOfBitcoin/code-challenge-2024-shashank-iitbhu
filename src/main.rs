@@ -1,71 +1,66 @@
-use std::{fs, fs::File, io::{self, Write}};
-use serde::{Deserialize, Serialize};
-// use serde_json::Value;
+use blockchainlib::*;
 
-// Define the input transaction data structure
-#[derive(Debug, Serialize, Deserialize)]
-struct Transaction {
-    version: u32,
-    locktime: u32,
-    vin: Vec<Vin>,
-    vout: Vec<Vout>,
-}
+fn main () {
+    let difficulty = 0x000fffffffffffffffffffffffffffff;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Vin {
-    txid: String,
-    vout: u32,
-    prevout: PrevOut,
-    scriptsig: String,
-    scriptsig_asm: Option<String>,
-    witness: Option<Vec<String>>,
-    is_coinbase: Option<bool>,
-    sequence: Option<u32>,
-}
+    let mut genesis_block = Block::new(0, now(), vec![0; 32], vec![
+        Transaction {
+            inputs: vec![ ],
+            outputs: vec![
+                transaction::Output {
+                    to_addr: "Alice".to_owned(),
+                    value: 50,
+                },
+                transaction::Output {
+                    to_addr: "Bob".to_owned(),
+                    value: 7,
+                },
+            ],
+        },
+    ], difficulty);
 
-#[derive(Debug, Serialize, Deserialize)]
-struct PrevOut {
-    scriptpubkey: String,
-    scriptpubkey_asm: Option<String>,
-    scriptpubkey_type: Option<String>,
-    scriptpubkey_address: Option<String>,
-    value: u64,
-}
+    genesis_block.mine();
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Vout {
-    scriptpubkey: String,
-    scriptpubkey_asm: Option<String>,
-    scriptpubkey_type: Option<String>,
-    scriptpubkey_address: Option<String>,
-    value: u64,
-}
+    println!("Mined genesis block {:?}", &genesis_block);
 
-fn main() -> io::Result<()> {
-    let mempool_dir = "mempool";
-    let mut transactions = vec![];
-    for entry in fs::read_dir(mempool_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        // println!("{:?}",path);
-        if path.is_file() {
-            let file = fs::File::open(path)?;
-            let tx: Transaction = serde_json::from_reader(file)?;
-            let txid = tx.vin[0].txid.clone(); // Assuming there's only one input for simplicity
-            transactions.push(txid);
-        }
-    }
+    let mut last_hash = genesis_block.hash.clone();
 
-    // Write to output.txt
-    let mut output_file = File::create("output.txt")?;
-    // Write block header (placeholder)
-    writeln!(output_file, "Block Header")?;
-    // Write serialized coinbase transaction (placeholder)
-    writeln!(output_file, "Serialized Coinbase Transaction")?;
-    // Write transaction IDs of mined transactions
-    for txid in transactions {
-        writeln!(output_file, "{}", txid)?;
-    }
+    let mut blockchain = Blockchain::new();
 
-    Ok(())
+    blockchain.update_with_block(genesis_block).expect("Failed to add genesis block");
+
+    let mut block = Block::new(1, now(), last_hash, vec![
+        Transaction {
+            inputs: vec![ ],
+            outputs: vec![
+                transaction::Output {
+                    to_addr: "Chris".to_owned(),
+                    value: 536,
+                },
+            ],
+        },
+        Transaction {
+            inputs: vec![
+                blockchain.blocks[0].transactions[0].outputs[0].clone(),
+            ],
+            outputs: vec![
+                transaction::Output {
+                    to_addr: "Alice".to_owned(),
+                    value: 360,
+                },
+                transaction::Output {
+                    to_addr: "Bob".to_owned(),
+                    value: 12,
+                },
+            ],
+        },
+    ], difficulty);
+
+    block.mine();
+
+    println!("Mined block {:?}", &block);
+
+    last_hash = block.hash.clone();
+
+    blockchain.update_with_block(block).expect("Failed to add block");
 }
